@@ -1,0 +1,73 @@
+services:
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    depends_on:
+      - mongo
+      - rabbitmq
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    networks:
+      - app-network
+
+  weather-python:
+    build: ./collector-python
+    container_name: weather-python
+    restart: always
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+
+  worker-go:
+    build: ./worker-go
+    container_name: worker-go
+    restart: always
+    depends_on:
+      - rabbitmq
+    networks:
+      - app-network
+
+volumes:
+  mongo_data:
+
+networks:
+  app-network:
+    driver: bridge
